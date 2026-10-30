@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- .NET Framework 4.8 уже есть в Windows 10 и 11: ничего доустанавливать не нужно, exe весит ~30 КБ -->
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>SimpleScreenshot</AssemblyName>
+    <RootNamespace>SimpleScreenshot</RootNamespace>
+    <LangVersion>7.3</LangVersion>
+    <ApplicationIcon>src\app.ico</ApplicationIcon>
+    <Product>Simple Screenshot</Product>
+    <AssemblyTitle>Simple Screenshot</AssemblyTitle>
+    <Version>1.0.0</Version>
+    <DebugType>none</DebugType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+  </ItemGroup>
+
+</Project>
