@@ -20,4 +20,11 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
 
+  <!-- Зашиваем внутрь exe, чтобы программа оставалась одним файлом -->
+  <ItemGroup>
+    <EmbeddedResource Include="src\tray.ico" LogicalName="tray.ico" />
+    <EmbeddedResource Include="src\app.ico" LogicalName="app.ico" />
+    <EmbeddedResource Include="src\shutter.wav" LogicalName="shutter.wav" />
+  </ItemGroup>
+
 </Project>

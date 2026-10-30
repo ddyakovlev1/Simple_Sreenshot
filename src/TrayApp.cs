@@ -1,6 +1,5 @@
 using System;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Forms;
@@ -13,7 +12,8 @@ namespace SimpleScreenshot
     internal sealed class TrayApp : ApplicationContext
     {
         private readonly NotifyIcon _tray;
-        private readonly Icon _icon;
+        private readonly Icon _icon;     // значок в трее
+        private readonly Icon _appIcon;  // значок окна настроек
         private readonly Control _invoker; // чтобы выполнять действия в UI-потоке
         private readonly ShutterSound _shutter;
         private KeyboardHook _hook;
@@ -25,7 +25,8 @@ namespace SimpleScreenshot
             _invoker = new Control();
             _invoker.CreateControl();
 
-            _icon = CreateTrayIcon();
+            _icon = Resources.TrayIcon(SystemInformation.SmallIconSize);
+            _appIcon = Resources.AppIcon();
             _shutter = new ShutterSound();
 
             var menu = new ContextMenuStrip();
@@ -176,7 +177,7 @@ namespace SimpleScreenshot
                 return;
             }
 
-            _settings = new SettingsForm(_icon);
+            _settings = new SettingsForm(_appIcon);
             _settings.FormClosed += delegate { _settings = null; };
             _settings.Show();
             _settings.Activate();
@@ -185,51 +186,6 @@ namespace SimpleScreenshot
         private void ShowError(string message)
         {
             _tray.ShowBalloonTip(5000, "Simple Screenshot", message, ToolTipIcon.Error);
-        }
-
-        // ---------- Значок ----------
-
-        // Рисуем значок кодом: синий квадрат с белыми уголками рамки выделения.
-        private static Icon CreateTrayIcon()
-        {
-            using (var bmp = new Bitmap(32, 32, PixelFormat.Format32bppArgb))
-            {
-                using (var g = Graphics.FromImage(bmp))
-                {
-                    g.SmoothingMode = SmoothingMode.AntiAlias;
-                    g.Clear(Color.Transparent);
-
-                    using (var path = RoundedRect(new Rectangle(1, 1, 30, 30), 7))
-                    using (var bg = new SolidBrush(Color.FromArgb(0, 120, 215)))
-                        g.FillPath(bg, path);
-
-                    using (var pen = new Pen(Color.White, 3f))
-                    {
-                        pen.StartCap = LineCap.Square;
-                        pen.EndCap = LineCap.Square;
-                        const int a = 8, b = 23, l = 6;
-                        g.DrawLines(pen, new[] { new Point(a, a + l), new Point(a, a), new Point(a + l, a) });
-                        g.DrawLines(pen, new[] { new Point(b - l, a), new Point(b, a), new Point(b, a + l) });
-                        g.DrawLines(pen, new[] { new Point(a, b - l), new Point(a, b), new Point(a + l, b) });
-                        g.DrawLines(pen, new[] { new Point(b - l, b), new Point(b, b), new Point(b, b - l) });
-                    }
-                }
-
-                // Значок создаётся один раз за всё время работы, освобождать его не нужно.
-                return Icon.FromHandle(bmp.GetHicon());
-            }
-        }
-
-        private static GraphicsPath RoundedRect(Rectangle r, int radius)
-        {
-            int d = radius * 2;
-            var path = new GraphicsPath();
-            path.AddArc(r.Left, r.Top, d, d, 180, 90);
-            path.AddArc(r.Right - d, r.Top, d, d, 270, 90);
-            path.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
-            path.AddArc(r.Left, r.Bottom - d, d, d, 90, 90);
-            path.CloseFigure();
-            return path;
         }
 
         // ---------- Выход ----------
