@@ -91,7 +91,9 @@ namespace SimpleScreenshot
                 Dock = DockStyle.Fill,
                 Margin = new Padding(0)
             };
-            var cancel = new Button { Text = "Отмена", DialogResult = DialogResult.Cancel, AutoSize = true, MinimumSize = new Size(90, 0) };
+            // Окно открыто через Show(), а не ShowDialog(): DialogResult его не закрывает, закрываем сами.
+            var cancel = new Button { Text = "Закрыть", AutoSize = true, MinimumSize = new Size(90, 0) };
+            cancel.Click += delegate { Close(); };
             var save = new Button { Text = "Сохранить", AutoSize = true, MinimumSize = new Size(90, 0) };
             save.Click += delegate { SaveAndClose(); };
             buttons.Controls.Add(cancel);
