@@ -9,20 +9,12 @@ namespace SimpleScreenshot
     internal static class AutoStart
     {
         private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-        private const string SettingsKey = @"Software\SimpleScreenshot";
         private const string ValueName = "SimpleScreenshot";
 
         /// <summary>Хочет ли пользователь автозапуск. По умолчанию — да.</summary>
         public static bool Wanted
         {
-            get
-            {
-                using (var key = Registry.CurrentUser.OpenSubKey(SettingsKey))
-                {
-                    object value = key == null ? null : key.GetValue("Autostart");
-                    return !(value is int) || (int)value != 0;
-                }
-            }
+            get { return AppSettings.ReadBool("Autostart", true); }
         }
 
         /// <summary>
@@ -31,8 +23,7 @@ namespace SimpleScreenshot
         /// </summary>
         public static void Apply(bool enabled)
         {
-            using (var settings = Registry.CurrentUser.CreateSubKey(SettingsKey))
-                settings.SetValue("Autostart", enabled ? 1 : 0, RegistryValueKind.DWord);
+            AppSettings.WriteBool("Autostart", enabled);
 
             using (var run = Registry.CurrentUser.CreateSubKey(RunKey))
             {

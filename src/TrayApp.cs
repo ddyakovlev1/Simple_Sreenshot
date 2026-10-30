@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -16,9 +15,10 @@ namespace SimpleScreenshot
         private readonly NotifyIcon _tray;
         private readonly Icon _icon;
         private readonly Control _invoker; // чтобы выполнять действия в UI-потоке
-        private readonly ToolStripMenuItem _autoStartItem;
+        private readonly ShutterSound _shutter;
         private KeyboardHook _hook;
         private CaptureOverlay _overlay;
+        private SettingsForm _settings;
 
         public TrayApp()
         {
@@ -26,16 +26,12 @@ namespace SimpleScreenshot
             _invoker.CreateControl();
 
             _icon = CreateTrayIcon();
+            _shutter = new ShutterSound();
 
             var menu = new ContextMenuStrip();
-            menu.Items.Add("Сделать скриншот (PrtSc)", null, delegate { StartCaptureDelayed(); });
-            menu.Items.Add("Открыть рабочий стол", null, delegate { OpenDesktop(); });
+            menu.Items.Add("Настройки", null, delegate { OpenSettings(); });
             menu.Items.Add(new ToolStripSeparator());
-            _autoStartItem = new ToolStripMenuItem("Запускать вместе с Windows");
-            _autoStartItem.Click += delegate { ToggleAutoStart(); };
-            menu.Items.Add(_autoStartItem);
-            menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add("Выход", null, delegate { ExitThread(); });
+            menu.Items.Add("Закрыть", null, delegate { ExitThread(); });
 
             _tray = new NotifyIcon
             {
@@ -47,7 +43,7 @@ namespace SimpleScreenshot
             _tray.MouseDoubleClick += delegate(object s, MouseEventArgs e)
             {
                 if (e.Button == MouseButtons.Left)
-                    StartCaptureDelayed();
+                    OpenSettings();
             };
 
             try
@@ -58,7 +54,6 @@ namespace SimpleScreenshot
             {
                 // Нет доступа к реестру — приложение всё равно работает.
             }
-            _autoStartItem.Checked = AutoStart.Wanted;
 
             try
             {
@@ -110,19 +105,6 @@ namespace SimpleScreenshot
 
         // ---------- Снимок ----------
 
-        // Из меню трея: ждём, пока меню исчезнет с экрана.
-        private void StartCaptureDelayed()
-        {
-            var timer = new Timer { Interval = 250 };
-            timer.Tick += delegate
-            {
-                timer.Stop();
-                timer.Dispose();
-                StartCapture();
-            };
-            timer.Start();
-        }
-
         private void StartCapture()
         {
             if (_overlay != null)
@@ -152,18 +134,22 @@ namespace SimpleScreenshot
 
                 if (result != null)
                 {
+                    if (AppSettings.SoundEnabled)
+                        _shutter.Play();
+
                     using (result)
-                        SaveToDesktop(result);
+                        Save(result);
                 }
             };
             _overlay.Show();
         }
 
-        private void SaveToDesktop(Bitmap image)
+        private void Save(Bitmap image)
         {
             try
             {
-                string dir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                string dir = AppSettings.SaveFolder;
+                Directory.CreateDirectory(dir);
                 string name = "Скриншот " + DateTime.Now.ToString("yyyy-MM-dd HH-mm-ss");
                 string path = Path.Combine(dir, name + ".png");
                 for (int i = 2; File.Exists(path); i++)
@@ -179,30 +165,21 @@ namespace SimpleScreenshot
 
         // ---------- Меню ----------
 
-        private void ToggleAutoStart()
+        private void OpenSettings()
         {
-            bool enable = !_autoStartItem.Checked;
-            try
+            // Окно уже открыто — просто выводим его наверх.
+            if (_settings != null)
             {
-                AutoStart.Apply(enable);
-                _autoStartItem.Checked = enable;
+                if (_settings.WindowState == FormWindowState.Minimized)
+                    _settings.WindowState = FormWindowState.Normal;
+                _settings.Activate();
+                return;
             }
-            catch (Exception ex)
-            {
-                ShowError("Не удалось изменить автозапуск: " + ex.Message);
-            }
-        }
 
-        private static void OpenDesktop()
-        {
-            try
-            {
-                Process.Start("explorer.exe",
-                    "\"" + Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory) + "\"");
-            }
-            catch (Exception)
-            {
-            }
+            _settings = new SettingsForm(_icon);
+            _settings.FormClosed += delegate { _settings = null; };
+            _settings.Show();
+            _settings.Activate();
         }
 
         private void ShowError(string message)
@@ -266,7 +243,10 @@ namespace SimpleScreenshot
             }
             if (_overlay != null)
                 _overlay.Cancel();
+            if (_settings != null)
+                _settings.Close();
 
+            _shutter.Dispose();
             _tray.Visible = false;
             _tray.Dispose();
             _invoker.Dispose();
